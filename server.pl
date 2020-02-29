@@ -33,40 +33,50 @@ head_tag(Title) -->
        ]).
 
 thoughts -->
-  html([ \thought_input(me),
-         \thought_input(them)
+  html([ \me(me),
+         \other(lee)
        ]).
 
-thought_input(Id) -->
-  { BaseAttrs = [ type=text,
-                  id=Id,
-                  placeholder='type a thought and hit Enter...',
-                  onkeypress='handleInput(event)'
-                ],
-    ( Id = me,
-      InputAttrs = [autofocus|BaseAttrs]
-    ; InputAttrs = BaseAttrs
-    )
-  },
-  html(
-    ul([ li([ label(for=thought, 'Thought: '),
-              input(InputAttrs)
-            ])
-        ])).
+info(Name) -->
+  html([ li(['Name: ', Name]),
+         li(['Last thought: ', span(id=last_+Name, [])])
+       ]).
+
+other(Name) -->
+  html(ul(\info(Name))).
+
+me(Name) -->
+  html(ul([ \info(Name),
+            li([ label(for=me, 'Thought: '),
+                 input([ type=text,
+                         id=me,
+                         autofocus,
+                         placeholder='type a thought and hit Enter...',
+                         onkeypress='handleInput(event)'
+                       ], [])
+               ])
+          ])).
 
 javascript -->
   { http_link_to_id(websocket, [], WebSocketPath)
   },
   js_script({|javascript(WebSocketPath)||
 const webSocketURL = `${window.location.host}${WebSocketPath}`
-const connection = new WebSocket(`ws://${webSocketURL}`)
+const webSocket = new WebSocket(`ws://${webSocketURL}`)
+
+webSocket.onmessage = function (e) {
+  console.log(`Got message: ${e.data}`)
+}
 
 function handleInput(e) {
   if (e.keyCode == 13) {
     const me = document.getElementById('me')
-    const msg = me.value
-    connection.send(msg)
+    const my_last = document.getElementById('last_me')
+    const thought = me.value
+    webSocket.send(thought)
     me.value = ''
+    // me.disabled = true
+    my_last.innerText = thought
   }
 }
   |}).
