@@ -1,25 +1,33 @@
-:- use_module(library(http/websocket)).
 :- use_module(library(http/http_server)).
 
-:- http_handler(root('.'),
-                meld,
-                []).
-:- http_handler(root(ws),
-                http_upgrade_to_websocket(echo, []),
-                []).
 
-echo(WebSocket) :-
-    ws_receive(WebSocket, Message),
-    (   Message.opcode==close
-    ->  true
-    ;   ws_send(WebSocket, Message),
-        echo(WebSocket)
-    ).
+:- http_handler(root(.), meld, []).
 
 meld(_Request) :-
-    reply_html_page(
-        title('Demo server'),
-        [ h1('Hello World!')
-        ]).
+  reply_html_page(
+    \head_tag(jake),
+    [ \thought_input(1),
+      \thought_input(2)
+    ]
+  ).
 
-:- initialization http_server([port(3000)]).
+head_tag(Title) -->
+  html(
+    [ meta(charset='UTF-8'),
+      meta([name=viewport, content='width=device-width, initial-scale=1.0']),
+      meta(['http-equiv'='X-UA-Compatible', content='ie=edge']),
+      title(Title)
+    ]).
+
+thought_input(Id) -->
+  html(
+    ul(
+      [ li(
+          [ label(for=thought, 'Thought: '),
+            input([type=text, id=thought_+Id])
+          ])
+      ])
+  ).
+
+server :-
+  http_server([port(8000)]).
