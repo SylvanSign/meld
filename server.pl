@@ -34,7 +34,7 @@ head_tag(Title) -->
 
 thoughts -->
   html([ \me(me),
-         \other(lee)
+         \other(other)
        ]).
 
 info(Name) -->
@@ -64,8 +64,11 @@ javascript -->
 const webSocketURL = `${window.location.host}${WebSocketPath}`
 const webSocket = new WebSocket(`ws://${webSocketURL}`)
 
-webSocket.onmessage = function (e) {
-  console.log(`Got message: ${e.data}`)
+webSocket.onmessage = event => {
+  const { data } = event
+  console.log(`Got data: ${data}`)
+  const message = JSON.parse(JSON.parse(data).data)
+  console.log(`Got message: ${JSON.stringify(message)}`)
 }
 
 function handleInput(e) {
@@ -73,11 +76,15 @@ function handleInput(e) {
     const me = document.getElementById('me')
     const my_last = document.getElementById('last_me')
     const thought = me.value
-    webSocket.send(thought)
+    send({ thought })
     me.value = ''
     // me.disabled = true
     my_last.innerText = thought
   }
+}
+
+function send(data) {
+  webSocket.send(JSON.stringify(data))
 }
   |}).
 
@@ -94,21 +101,27 @@ message_handler(Hub) :-
   handle_message(Message, Hub),
   message_handler(Hub).
 
-handle_message(Message, Room) :-
+handle_message(Message, Hub) :-
 	websocket{opcode:text} :< Message, !,
-  write('got message'), writeln(Message),
-	hub_broadcast(Room.name, Message).
+  write('got message: '), writeln(Message),
+  broadcast(Hub, Message).
 
-handle_message(Message, _Room) :-
+handle_message(Message, Hub) :-
 	hub{joined:Id} :< Message, !,
-  write('new join'), writeln(Message).
+  write('new join: '), writeln(Message),
+  broadcast(Hub, Message).
 
-handle_message(Message, _Room) :-
+handle_message(Message, Hub) :-
 	hub{left:Id} :< Message, !,
-  write('leave'), writeln(Message).
+  write('leave: '), writeln(Message),
+  broadcast(Hub, Message).
 
-handle_message(Message, _Room) :-
-  write('ignored message'), writeln(Message).
+handle_message(Message, Hub) :-
+  write('ignored message: '), writeln(Message),
+  broadcast(Hub, Message).
+
+broadcast(Hub, Message) :-
+	hub_broadcast(Hub.name, json(Message)).
 
 server :-
   create_websocket_hub,
